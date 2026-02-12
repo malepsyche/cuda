@@ -14,25 +14,25 @@
     }                                                                \
 } while(0)
 
-__global__ void add_kernel(float* a, float* b, float* c, int n) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < n) {
-        c[idx] = a[idx] + b[idx];
+__global__ void vector_add(float* d_a, float* d_b, float* d_c, int num_elements) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < num_elements) {
+        c[i] = a[i] + b[i];
     }
 }
 
-void compute_gflops(int threads) {
-    int n = 1 << 30;
-    size_t bytes = n * sizeof(float);
+void compute_gflops(int threadsPerBlock) {
+    int num_elements = 1 << 30;
+    size_t bytes = num_elements * sizeof(float);
 
     // rng
     std::mt19937 rng(std::random_device{}());  
     std::uniform_real_distribution<float> dist(0.0f, 100.0f);
 
-    std::vector<float> h_a(n);
-    std::vector<float> h_b(n);
-    std::vector<float> h_c(n, 0.0f);
-    for (int i=0; i<n; i++) {
+    std::vector<float> h_a(num_elements);
+    std::vector<float> h_b(num_elements);
+    std::vector<float> h_c(num_elements, 0.0f);
+    for (int i=0; i<num_elements; ++i) {
         h_a[i] = dist(rng);
         h_b[i] = dist(rng);
     }
@@ -45,22 +45,22 @@ void compute_gflops(int threads) {
     CUDA_CHECK(cudaMemcpy(d_a, h_a.data(), bytes, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_b, h_b.data(), bytes, cudaMemcpyHostToDevice));
     
-    int blocks = (n + threads - 1) / threads;
+    int numBlocks = (num_elements + threadsPerBlock - 1) / threadsPerBlock;
 
     cudaEvent_t start, stop;
     CUDA_CHECK(cudaEventCreate(&start));
     CUDA_CHECK(cudaEventCreate(&stop));
     CUDA_CHECK(cudaEventRecord(start));
-    add_kernel<<<blocks, threads>>>(d_a, d_b, d_c, n);
+    vector_add<<<numBlocks, threadsPerBlock>>>(d_a, d_b, d_c, num_elements);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaEventRecord(stop));
     CUDA_CHECK(cudaEventSynchronize(stop));
     float elapsed_ms = 0.0f;
     CUDA_CHECK(cudaEventElapsedTime(&elapsed_ms, start, stop));
-    double gflops = (double)n / ((elapsed_ms / 1000.0) * 1e9);
+    double gflops = (double)num_elements / ((elapsed_ms / 1000.0) * 1e9);
     
-    std::cout << "Blocks: " << blocks 
-              << " Threads: " << threads 
+    std::cout << "numBlocks: " << numBlocks 
+              << " threadsPerBlock: " << threadsPerBlock 
               << " GFlop/s: " << gflops 
               << std::endl; 
 
