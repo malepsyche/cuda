@@ -77,7 +77,7 @@ int main() {
     }
 
     // device memory
-    float* d_a, float* d_b, float* d_c;
+    float *d_a, *d_b, *d_c;
     CUDA_CHECK(cudaMalloc(&d_a, bytes));
     CUDA_CHECK(cudaMalloc(&d_b, bytes));
     CUDA_CHECK(cudaMalloc(&d_c, bytes));
