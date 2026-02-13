@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Automatically detect your GPU architecture
-set(CMAKE_CUDA_ARCHITECTURES native)
+set(CMAKE_CUDA_ARCHITECTURES 80)
 
 # Optional CUDA flags
 add_compile_options($<$<COMPILE_LANGUAGE:CUDA>:
