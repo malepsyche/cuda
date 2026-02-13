@@ -37,7 +37,7 @@ double compute_gflops(F kernel, int num_elements) {
     CUDA_CHECK(cudaEventCreate(&stop));
 
     // warmup
-    kernel_launch();
+    kernel();
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -87,7 +87,7 @@ int main() {
 
     // calculate gflops for 1d grid/block configuration
     int threadsPerBlock = 256;
-    int numBlocks = (numElements + threadsPerBlock - 1) / threadsPerBlock;
+    int numBlocks = (num_elements + threadsPerBlock - 1) / threadsPerBlock;
     double matrix_add_1d_gflops = compute_gflops([&]() {
         matrix_add_1d<<<numBlocks, threadsPerBlock>>>(d_a, d_b, d_c, num_elements);
     }, num_elements);
@@ -95,9 +95,9 @@ int main() {
     // calculate gflops for 2d grid/block configuration
     dim3 block(16, 16);
     dim3 grid((matrix_width + block.x - 1) / block.x, 
-              (matrix_height + block.y) / block.y);
+              (matrix_height + block.y - 1) / block.y);
     double matrix_add_2d_gflops = compute_gflops([&]() {
-        matrix_add_2d<<<block, grid>>>(d_a, d_b, d_c, matrix_width, matrix_height)
+        matrix_add_2d<<<grid, block>>>(d_a, d_b, d_c, matrix_width, matrix_height);
     }, num_elements);
 
     // results

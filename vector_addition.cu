@@ -17,11 +17,31 @@
 __global__ void vector_add(float* d_a, float* d_b, float* d_c, int num_elements) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < num_elements) {
-        c[i] = a[i] + b[i];
+        d_c[i] = d_a[i] + d_b[i];
     }
 }
 
-void compute_gflops(int threadsPerBlock) {
+template<typename F>
+double compute_gflops(F kernel, int num_elements) {
+    cudaEvent_t start, stop;
+    CUDA_CHECK(cudaEventCreate(&start));
+    CUDA_CHECK(cudaEventCreate(&stop));
+    CUDA_CHECK(cudaEventRecord(start));
+    kernel();
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaEventRecord(stop));
+    CUDA_CHECK(cudaEventSynchronize(stop));
+    float elapsed_ms = 0.0f;
+    CUDA_CHECK(cudaEventElapsedTime(&elapsed_ms, start, stop));
+    double gflops = (double)num_elements / ((elapsed_ms / 1000.0) * 1e9); 
+
+    CUDA_CHECK(cudaEventDestroy(start));
+    CUDA_CHECK(cudaEventDestroy(stop));
+
+    return gflops;
+}
+
+int main() {
     int num_elements = 1 << 30;
     size_t bytes = num_elements * sizeof(float);
 
@@ -45,39 +65,24 @@ void compute_gflops(int threadsPerBlock) {
     CUDA_CHECK(cudaMemcpy(d_a, h_a.data(), bytes, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_b, h_b.data(), bytes, cudaMemcpyHostToDevice));
     
-    int numBlocks = (num_elements + threadsPerBlock - 1) / threadsPerBlock;
+    std::vector<int> blockSizes = {32, 64, 128, 256};
+    for (int i=0; i<blockSizes.size(); ++i) {
+        int threadsPerBlock = blockSizes[i];
+        int blocks = (num_elements + threadsPerBlock - 1) / threadsPerBlock;
+        double gflops = compute_gflops([&]() {
+            vector_add<<<blocks, threadsPerBlock>>>(d_a, d_b, d_c, num_elements);
+        }, num_elements);
+        // results
+        std::cout << "Blocks: " << blocks 
+                << " threadsPerBlock: " << threadsPerBlock 
+                << " GFlop/s: " << gflops 
+                << std::endl;
+    }
 
-    cudaEvent_t start, stop;
-    CUDA_CHECK(cudaEventCreate(&start));
-    CUDA_CHECK(cudaEventCreate(&stop));
-    CUDA_CHECK(cudaEventRecord(start));
-    vector_add<<<numBlocks, threadsPerBlock>>>(d_a, d_b, d_c, num_elements);
-    CUDA_CHECK(cudaGetLastError());
-    CUDA_CHECK(cudaEventRecord(stop));
-    CUDA_CHECK(cudaEventSynchronize(stop));
-    float elapsed_ms = 0.0f;
-    CUDA_CHECK(cudaEventElapsedTime(&elapsed_ms, start, stop));
-    double gflops = (double)num_elements / ((elapsed_ms / 1000.0) * 1e9);
-    
-    std::cout << "numBlocks: " << numBlocks 
-              << " threadsPerBlock: " << threadsPerBlock 
-              << " GFlop/s: " << gflops 
-              << std::endl; 
-
-    CUDA_CHECK(cudaMemcpy(h_c.data(), d_c, bytes, cudaMemcpyDeviceToHost));
-
+    // cleanup
     CUDA_CHECK(cudaFree(d_a));
     CUDA_CHECK(cudaFree(d_b));
     CUDA_CHECK(cudaFree(d_c));
-    CUDA_CHECK(cudaEventDestroy(start));
-    CUDA_CHECK(cudaEventDestroy(stop));
-}
-
-int main() {
-    std::vector<int> blockSizes = {32, 64, 128, 256};
-    for (int i=0; i<blockSizes.size(); ++i) {
-        compute_gflops(blockSizes[i]);
-    }
 
     return 0;
 }
