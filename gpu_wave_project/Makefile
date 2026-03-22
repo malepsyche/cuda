@@ -5,7 +5,7 @@ SRC       ?= wave2d_solver.cu
 
 ARCH      ?= sm_80
 CXXFLAGS  ?= -O3 -std=c++17 -lineinfo
-LDFLAGS   ?= -lcusparse
+LDFLAGS   ?= -lcusparse -lstdc++fs
 
 all: $(TARGET)
 
