@@ -40,7 +40,7 @@
 
 namespace fs = std::filesystem;
 
-static __host__ __device__ inline int idx(int i, int j, int Nx) { return i * nx + j; }
+static __host__ __device__ inline int idx(int i, int j, int nx) { return i * nx + j; }
 
 struct Config {
     std::string method = "global";          // global | shared | cusparse
