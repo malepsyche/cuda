@@ -10,6 +10,9 @@ echo "Running vector_addition"
 echo "Running matrix_addition"
 ./build/matrix_addition
 
+echo "Running matrix_multiplication_untiled"
+./build/matrix_multiplication_untiled
+
 echo "Running wave2d_naive"
 ./build/wave2d_naive
 
