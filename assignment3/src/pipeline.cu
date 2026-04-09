@@ -217,9 +217,7 @@ __global__ void equalizeKernel(
 
     float new_val = 0.0f;
     if (denom > 0.0f) {
-        float cdf_val = (old_val == 255)
-            ? total_pixels
-            : cdf[old_val + 1];   // inclusive count for intensity <= old_val
+        float cdf_val = cdf[old_val];   
 
         new_val = roundf(((cdf_val - cdf_min) / denom) * 255.0f);
     }

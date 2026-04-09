@@ -86,12 +86,15 @@ static void process_batch_on_device(std::vector<ImageEntry>& sub_batch, int devi
         thrust::exclusive_scan(hist_ptr, hist_ptr + 256, cdf_ptr);
 
         // Copy exclusive CDF to host just to find cdf_min
+        unsigned int h_hist[256];
         float h_cdf[256];
-        cudaMemcpy(h_cdf, d_cdf[i], cdf_bytes, cudaMemcpyDeviceToHost);
+
+        cudaMemcpy(h_hist, d_hist[i], hist_bytes, cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_cdf,  d_cdf[i],  cdf_bytes,  cudaMemcpyDeviceToHost);
 
         float cdf_min = 0.0f;
         for (int b = 0; b < 256; b++) {
-            if (h_cdf[b] > 0.0f) {
+            if (h_hist[b] > 0) {
                 cdf_min = h_cdf[b];
                 break;
             }
