@@ -78,40 +78,24 @@ static void process_batch_on_device(std::vector<ImageEntry>& sub_batch, int devi
             d_sobel[i], d_hist[i], W, H
         );
 
-        // Stage 3B: CDF
-        // thrust::exclusive_scan here uses default stream in this scaffold,
-        // so make sure prior work for this image is done first.
+        // Stage 3B: CDF (exclusive)
         cudaStreamSynchronize(streams[i]);
 
         thrust::device_ptr<unsigned int> hist_ptr(d_hist[i]);
         thrust::device_ptr<float>        cdf_ptr(d_cdf[i]);
         thrust::exclusive_scan(hist_ptr, hist_ptr + 256, cdf_ptr);
 
-        // Copy histogram and exclusive CDF to host
-        unsigned int h_hist[256];
-        float h_cdf_exclusive[256];
+        // Copy exclusive CDF to host just to find cdf_min
+        float h_cdf[256];
+        cudaMemcpy(h_cdf, d_cdf[i], cdf_bytes, cudaMemcpyDeviceToHost);
 
-        cudaMemcpy(h_hist, d_hist[i], hist_bytes, cudaMemcpyDeviceToHost);
-        cudaMemcpy(h_cdf_exclusive, d_cdf[i], cdf_bytes, cudaMemcpyDeviceToHost);
-
-        // Build inclusive CDF on host:
-        // inclusive_cdf[v] = #pixels with intensity <= v
-        float h_cdf_inclusive[256];
-        for (int b = 0; b < 256; b++) {
-            h_cdf_inclusive[b] = h_cdf_exclusive[b] + (float)h_hist[b];
-        }
-
-        // Find first non-zero value in the inclusive CDF
         float cdf_min = 0.0f;
         for (int b = 0; b < 256; b++) {
-            if (h_cdf_inclusive[b] > 0.0f) {
-                cdf_min = h_cdf_inclusive[b];
+            if (h_cdf[b] > 0.0f) {
+                cdf_min = h_cdf[b];
                 break;
             }
         }
-
-        // Copy inclusive CDF back to device so equalizeKernel can use it directly
-        cudaMemcpy(d_cdf[i], h_cdf_inclusive, cdf_bytes, cudaMemcpyHostToDevice);
 
         // Stage 3C: Equalize
         equalizeKernel<<<grid, block, 0, streams[i]>>>(
