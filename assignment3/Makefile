@@ -8,7 +8,11 @@ CXX_STD     := -std=c++17
 # TODO [A3]: Set the correct compute capability for your lab GPU.
 #   Run `nvidia-smi --query-gpu=compute_cap --format=csv,noheader` to find it.
 #   Common values: 61 (GTX 10xx), 75 (RTX 20xx), 86 (RTX 30xx), 89 (RTX 40xx)
-ARCH        := -gencode arch=compute_70,code=sm_70
+ARCH := \
+	-gencode arch=compute_70,code=sm_70 \
+	-gencode arch=compute_75,code=sm_75 \
+	-gencode arch=compute_80,code=sm_80 \
+	-gencode arch=compute_86,code=sm_86
 
 # Optimisation and debug flags.
 # For profiling: keep -lineinfo so Nsight can map back to source lines.
