@@ -18,6 +18,7 @@ OPT_FLAGS   := -O2 -lineinfo
 WARN_FLAGS  := -Xcompiler -Wall,-Wextra
 
 NVCC_FLAGS  := $(CXX_STD) $(ARCH) $(OPT_FLAGS) $(WARN_FLAGS)
+LDLIBS      := -lstdc++fs
 
 # Source files
 SRCS        := src/main.cu \
@@ -37,7 +38,7 @@ OUTPUT_DIR  := output
 build: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(NVCC) $(NVCC_FLAGS) -o $@ $^
+	$(NVCC) $(NVCC_FLAGS) -o $@ $^ $(LDLIBS)
 
 # Run the pipeline on all test images.
 run: build
